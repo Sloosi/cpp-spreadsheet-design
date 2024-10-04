@@ -4,10 +4,31 @@
 #include "common.h"
 
 #include <functional>
+#include <unordered_map>
+
+struct CellHasher {
+public:
+    size_t operator()(const Position p) const {
+        return i_hasher_(p.row) * seed + i_hasher_(p.col) * seed * seed;
+    }
+
+private:
+    std::hash<int> i_hasher_;
+    size_t seed = 17;
+};
+
+struct CellComparator {
+public:
+    bool operator()(const Position& lhs, const Position& rhs) const {
+        return lhs == rhs;
+    }
+};
 
 class Sheet : public SheetInterface {
 public:
-    ~Sheet();
+    using Table = std::unordered_map<Position, std::unique_ptr<Cell>, CellHasher, CellComparator>;
+
+    ~Sheet() = default;
 
     void SetCell(Position pos, std::string text) override;
 
@@ -21,14 +42,9 @@ public:
     void PrintValues(std::ostream& output) const override;
     void PrintTexts(std::ostream& output) const override;
 
-    const Cell* GetConcreteCell(Position pos) const;
-    Cell* GetConcreteCell(Position pos);
-
 private:
-    void MaybeIncreaseSizeToIncludePosition(Position pos);
-    void PrintCells(std::ostream& output,
-                    const std::function<void(const CellInterface&)>& printCell) const;
-    Size GetActualSize() const;
+    const Cell* GetCell(Position pos) const;
+    Cell* GetCell(Position pos);
 
-    std::vector<std::vector<std::unique_ptr<Cell>>> cells_;
+	Table cells_;
 };
